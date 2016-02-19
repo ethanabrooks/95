@@ -76,7 +76,7 @@ void *start_server(void *argv_void)
 
   int fd = -1;
   int successful_requests = 0;
-  int unsuccessful_requests = 0;
+  int bad_requests = 0;
   int bytes_received = 0;
   char fnames [BUFF_SIZE]; 
   hash_table *page_table = create_hash_table(10);
@@ -102,7 +102,7 @@ void *start_server(void *argv_void)
       if (!fname_ptr) {
         char error_buff [BUFF_SIZE];
         sprintf(error_buff, "Unrecognized format: %s", request);
-        server_error(error_buff, &reply, &unsuccessful_requests);
+        server_error(error_buff, &reply, &bad_requests);
       }
       char *fname = strsep(&fname_ptr, " ");
       if (strcmp(fname, "favicon.ico") != 0) {
@@ -121,7 +121,7 @@ void *start_server(void *argv_void)
               for all successful page requests: %d\n<p>\n\
               The distinct names of all files retrieved \
               for all successful page requests: \n<ul>\n%s</li>\n</ul>",
-              successful_requests, unsuccessful_requests, bytes_received,
+              successful_requests, bad_requests, bytes_received,
               fnames);
           reply = strcat(header, html);
         } else {
@@ -132,11 +132,11 @@ void *start_server(void *argv_void)
 
           strcpy(pathbuffer, argv[2]); // add root to filepath
           if (!pathbuffer[0]) { 
-            server_error("strcpy failed", &reply, &unsuccessful_requests);
+            server_error("strcpy failed", &reply, &bad_requests);
           }
           char* filepath = strcat(pathbuffer, fname); // append filename to path
           if (!filepath) {
-            server_error("strcat failed", &reply, &unsuccessful_requests);
+            server_error("strcat failed", &reply, &bad_requests);
           }
           FILE *file = fopen(filepath, "r");
           if (!file) {
@@ -147,7 +147,7 @@ void *start_server(void *argv_void)
             size_t bytes_read = fread(html, 1, sizeof(html), file);
             reply = strcat(header, html);
             if (!reply) { 
-              server_error("strcat failed", &reply, &unsuccessful_requests);
+              server_error("strcat failed", &reply, &bad_requests);
             }
           }
         }
@@ -162,7 +162,7 @@ void *start_server(void *argv_void)
         bytes_received += strlen(reply); 
         int err = add_to_table(page_table, fname);
         if (err) {
-          server_error("error adding to table", &reply, &unsuccessful_requests);
+          server_error("error adding to table", &reply, &bad_requests);
         }
         strcat(fnames, "</li>\n<li>"); 
         strcat(fnames, fname); 
