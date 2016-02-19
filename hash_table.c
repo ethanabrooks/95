@@ -86,7 +86,7 @@ int add_to_table (hash_table* table, char* value)
         linked_list** bucket_ptr = &table->table[bucket_num] ;
 
       /* add value to proper bucket */
-        *bucket_ptr = add(*bucket_ptr, value);
+        *bucket_ptr = add_if_absent(*bucket_ptr, value);
     }
     return 0 ;
 }

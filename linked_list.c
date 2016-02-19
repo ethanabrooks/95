@@ -238,6 +238,7 @@ void print_list (linked_list* head_node ) {
   /* CIT 593 to do: this code only prints the first node,
         print out the rest of the list! */;
   print_list_helper(head_node, 0);
+  printf("\n");
 };
 
 /*

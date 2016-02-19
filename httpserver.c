@@ -17,6 +17,7 @@ http://www.binarii.com/files/papers/c_sockets.txt
 #include <string.h>
 #include <pthread.h>
 #include "hash_table.h"
+#include "linked_list.h"
 #define BUFF_SIZE 10000
 
 int quit = 0;
@@ -78,7 +79,6 @@ void *start_server(void *argv_void)
   int successful_requests = 0;
   int bad_requests = 0;
   int bytes_received = 0;
-  char fnames [BUFF_SIZE]; 
   hash_table *page_table = create_hash_table(10);
 
   while(!quit) {
@@ -98,12 +98,12 @@ void *start_server(void *argv_void)
       int bytes_received = recv(fd,request,1024,0);
       // null-terminate the string
       request[bytes_received] = '\0';
+
       char *fname_ptr = strchr(request, '/') + 1;
       if (!fname_ptr) {
-        char error_buff [BUFF_SIZE];
-        sprintf(error_buff, "Unrecognized format: %s", request);
-        server_error(error_buff, &reply, &bad_requests);
+        server_error("unrecognized request format", &reply, &bad_requests);
       }
+
       char *fname = strsep(&fname_ptr, " ");
       if (strcmp(fname, "favicon.ico") != 0) {
 
@@ -112,6 +112,18 @@ void *start_server(void *argv_void)
         if (strcmp(fname, "stats") == 0) {
           char header [BUFF_SIZE];
           char html [BUFF_SIZE];
+          char page_html [BUFF_SIZE];
+
+          linked_list* page_list = to_linked_list(page_table);
+          strcpy(page_html, "\n<ul>\n");
+          for (; page_list; page_list = page_list->next) {
+            strcat(page_html, "\t<li>");
+            strcat(page_html, page_list->value);
+            strcat(page_html, "</li>\n");
+          }
+          //TODO: unsuccessful pages should not be listed
+          //TODO: add NULLs to buffers
+
           strcpy(header, ok_header); 
           sprintf(html, "<html>\n\
               Number of page requests handled successfully: %d\n<p>\n\
@@ -120,14 +132,14 @@ void *start_server(void *argv_void)
               Total number of bytes sent back to the client \
               for all successful page requests: %d\n<p>\n\
               The distinct names of all files retrieved \
-              for all successful page requests: \n<ul>\n%s</li>\n</ul>",
+              for all successful page requests: %s</li>\n</ul>",
               successful_requests, bad_requests, bytes_received,
-              fnames);
+              page_html);
           reply = strcat(header, html);
         } else {
 
-          char header [BUFF_SIZE];
-          char html [BUFF_SIZE];
+          char header     [BUFF_SIZE];
+          char html       [BUFF_SIZE];
           char pathbuffer [BUFF_SIZE]; // buffer for full path to file
 
           strcpy(pathbuffer, argv[2]); // add root to filepath
@@ -140,14 +152,21 @@ void *start_server(void *argv_void)
           }
           FILE *file = fopen(filepath, "r");
           if (!file) {
-            fprintf(stderr, "Could not find %s in %s\n", fname, argv[2]);
+            fprintf(stderr, "Could not find %s in root directory\n", fname);
             reply = "HTTP/1.1 404 Not Found";
+            bad_requests++;
           } else {
             strcpy(header, ok_header);
             size_t bytes_read = fread(html, 1, sizeof(html), file);
             reply = strcat(header, html);
             if (!reply) { 
               server_error("strcat failed", &reply, &bad_requests);
+            }
+            successful_requests++;
+            bytes_received += strlen(reply); 
+            int err = add_to_table(page_table, fname);
+            if (err) {
+              server_error("error adding to table", &reply, &bad_requests);
             }
           }
         }
@@ -158,14 +177,6 @@ void *start_server(void *argv_void)
         send(fd, reply, strlen(reply), 0);
         printf("Server sent message: %s\n", reply);
 
-        successful_requests++;
-        bytes_received += strlen(reply); 
-        int err = add_to_table(page_table, fname);
-        if (err) {
-          server_error("error adding to table", &reply, &bad_requests);
-        }
-        strcat(fnames, "</li>\n<li>"); 
-        strcat(fnames, fname); 
       } 
     }
   } // end while
