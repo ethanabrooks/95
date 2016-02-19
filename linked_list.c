@@ -7,7 +7,7 @@
 /* definition of linked list helper functions */
 
 
-linked_list* new_node(char* value) {
+linked_list* create_node(char* value) {
     linked_list* new_linked_list = calloc(sizeof(linked_list), 1);
     if (!new_linked_list) {
         perror("calloc failed");
@@ -19,7 +19,6 @@ linked_list* new_node(char* value) {
         exit(-1);
     }
     strcpy(new_linked_list->value, value);
-    new_linked_list->count = 1;
     new_linked_list->next = NULL;
     new_linked_list->prev = NULL;
     return new_linked_list;
@@ -29,28 +28,27 @@ linked_list* copy(linked_list* node) {
     if (!node) {
         return NULL;
     }
-    linked_list* node_copy = new_node(node->value);
-    node_copy->count = node->count;
+    linked_list* node_copy = create_node(node->value);
+    node_copy->next = copy(node->next);
     return node_copy;
 }
 
 /* checks for membership before adding
 */
-linked_list* add_if_absent (linked_list* head_node, char* value) {
-    linked_list* node = head_node;
+int add_if_absent (linked_list** list, char* value) {
+    linked_list *node = *list;
     for (; node; node = node->next) {
         if (strcmp(node->value, value) == 0) {
-            node->count++;
-            return head_node;
+            return 0;
         }
     }
-    return add(head_node, value);
+    return add(list, value);
 }
 
 /*
  * links node1 to node2 so that node1.next = node2 and node2.prev = node1
  */
-linked_list* link_nodes(linked_list* node1, linked_list* node2) {
+linked_list* link_nodes(linked_list *node1, linked_list *node2) {
   if (node2){
     node2->prev = node1;
   }
@@ -65,89 +63,83 @@ linked_list* link_nodes(linked_list* node1, linked_list* node2) {
  * this function adds a node to the beginning of the linked list
  * -returns head_node - or NULL if error
 */
-linked_list* add (linked_list* head_node, char* value) {
-    linked_list* new_head = new_node(value);
-    new_head = link_nodes(new_head, head_node);
-    return new_head;
+int add (linked_list **list, char* value) {
+  if (!list) {
+    return -1;
+  }
+  linked_list *new_head = create_node(value);
+  *list = link_nodes(new_head, *list);
+  return 0;
 }
 
 /*
  * given a pointer to a node, adds that node to the end of a linked list
  */
-linked_list* add_node_to_end
-(linked_list* head_node, linked_list* new_node) {
-  if (head_node) {
-    /* recurse on node after next and link head_node to result */
-    link_nodes(head_node, add_node_to_end(head_node->next, new_node));
-    return head_node;
+int add_node_to_end(linked_list **list, linked_list *new_node) {
+  if (!list) {
+    return -1;
+  } 
+  linked_list *node = *list;
+  while (node) { 
+    node = node->next;
   }
-  else {  /* if head_node is last node in list, link it to new_node*/
-   return link_nodes(head_node, new_node);
-  }
+  link_nodes(node, new_node);
+  return 0;
 }
 /*
  * this function adds a node to the end of the linked list
  * -returns head_node - or NULL if error
  */
-linked_list* add_to_end (linked_list* head_node, char* name){
+int add_to_end (linked_list **list, char* name){
   /* define new node with node->value = value */
-  linked_list* new_node = malloc (sizeof(linked_list));
-  if (new_node == NULL) return NULL ;
-
-  strcpy(new_node->value, name) ;
-  new_node->next = NULL;
-  new_node->prev = NULL;
+  linked_list* new_node = create_node(name);
    /* add new node to end of list */
-  return add_node_to_end(head_node, new_node);
+  return add_node_to_end(list, new_node);
 }
 
 /*
  * delete node specified by address (as opposed to value)
  */
-linked_list* delete_specific_node
-(linked_list* head_node, linked_list* node_to_delete){
-    if (!node_to_delete) {
-        return NULL;
-    }
-   /* link nodes adjacent to node_to_delete */
+int delete_specific_node (linked_list** list, linked_list* node_to_delete){
+  if (!node_to_delete) {
+      return -1;
+  }
+  /* link nodes adjacent to node_to_delete */
   link_nodes(node_to_delete->prev, node_to_delete->next);
   /* if we delete the head_node, we must return the subsequent node */
-    if (node_to_delete == head_node) {
-        head_node = head_node->next;
-    }
-    free(node_to_delete->value);
-    free(node_to_delete);
-  return head_node;
+  if (node_to_delete == *list) {
+      *list = (*list)->next;
+  }
+  free(node_to_delete->value);
+  free(node_to_delete);
+  return 0;
 };
 
 /*
  * deletes the first instance of the "value" from the list
  * -returns head_node - or NULL if node isn't in list
  */
-linked_list* delete_node (linked_list* head_node, char* name){
+int delete_node (linked_list **list, char* name){
   /* find address of first node with value */
-  linked_list* node_to_delete = search_list(head_node, name);
+  linked_list *node_to_delete = search_list(*list, name);
   /* if found, delete it */
   if (node_to_delete) {
-    return delete_specific_node(head_node, node_to_delete);
+    return delete_specific_node(list, node_to_delete);
   }
-  else return NULL;
+  else return -1;
 }
 
 /*
  * searches list for first instance of the "value" passed in
  * -returns node if found - or a NULL if node isn't in list
  */
-linked_list* search_list (linked_list* head_node, char* name){
-  if (head_node) {
-    /* return address of first node with desired value */
-      if (strcmp(head_node->value, name)==0){
+linked_list *search_list (linked_list *head_node, char* value){
+  for (; head_node; head_node = head_node->next) {
+    if (strcmp(head_node->value, value)) {
       return head_node;
-    } else {
-      /* recurse through list until first node with value is found */
-      return search_list (head_node->next, name);
     }
-  } else return NULL;
+  }
+  return NULL;
 }
 
 
@@ -184,27 +176,28 @@ linked_list* partition
 /*
  * quicksort
  */
-linked_list* sort (linked_list* head, int reverse) {
-  if (head) {
+int sort (linked_list** list, int reverse) {
+  if (list) {
+    linked_list *head = *list;
     /* before is a list of elements that should come before head */
     linked_list* before = partition(head->next, NULL, head->value, reverse);
     /* after is a list of elements that should come after head */
     linked_list* after = head->next;
     /* recurse on before and after */
-    before = sort(before, reverse); after = sort(after, reverse);
+    sort(&before, reverse); sort(&after, reverse);
     /* create new list: before --> head --> after */
-    return add_node_to_end(before, link_nodes(head, after));
+    return add_node_to_end(&before, link_nodes(head, after));
   }
   /* if head is the empty list, return NULL */
-  else { return head; }
+  else { return 0; }
 };
 
 /*
  * sorts linked list in acending order: 1, 2, 3...
  * -returns new head of linked list after sort, or NULL if list is empty
  */
-linked_list* sort_list (linked_list* head_node ) {
-  return sort(head_node, 0); // 0 means "not reversed"
+int sort_list (linked_list** list ) {
+  return sort(list, 0); // 0 means "not reversed"
 }
 
 
@@ -212,23 +205,9 @@ linked_list* sort_list (linked_list* head_node ) {
  * sorts linked list in decending order: 3, 2, 1...
  * -returns new head of linked list after sort, or NULL if list is empty
  */
-linked_list* sort_list_rev (linked_list* head_node ) {
-  return sort(head_node, 1) ; // 1 means "reversed"
+int sort_list_rev (linked_list** list ) {
+  return sort(list, 1) ; // 1 means "reversed"
 }
-
-/*
- * aux function to print list that includes linked_list i
- */
-void print_list_helper(linked_list* head_node, int i) {
-  if (head_node) {
-    printf (" %s", head_node->value) ;
-    /* recurse on next node */
-      if (head_node->next) {
-          printf(",");
-          print_list_helper(head_node->next, i+1);
-      }
-  }
-};
 
 
 /*
@@ -237,44 +216,52 @@ void print_list_helper(linked_list* head_node, int i) {
 void print_list (linked_list* head_node ) {
   /* CIT 593 to do: this code only prints the first node,
         print out the rest of the list! */;
-  print_list_helper(head_node, 0);
-  printf("\n");
+
+  printf ("%s", head_node->value) ;
+  head_node = head_node->next;
+  for (; head_node; head_node = head_node->next) {
+    printf (", %s", head_node->value) ;
+  }
 };
 
 /*
  * delete every node in the linked list
  * returns NULL if successful, otherwise head node is returned
  */
-linked_list* delete_list (linked_list* head_node ) {
+void delete_list_helper (linked_list* head_node) {
   if (head_node) {
       /* if head node exists, delete it */
-      linked_list* next = head_node->next;
+      linked_list *next = head_node->next;
       free(head_node->value);
       free(head_node);
-    if (head_node) {
-        head_node = NULL;
-    }
     /* recurse on next node */
-    return delete_list(next);
-  } else { return NULL; }
+      delete_list_helper(next); 
+  }
+}
+
+void delete_list (linked_list **list) {
+  delete_list_helper(*list);
+  *list = NULL;
 }
 
 int length(linked_list* head) {
-    if (head) {
-        return 1 + length(head->next);
-    } else return 0;
+  int length = 0;
+  for (; head; head = head->next) {
+    length++;
+  }
+  return length;
 }
 
-linked_list* get_max(linked_list* head) {
-    if (!head) {
-        return NULL;
-    }
-    linked_list* node = head;
-    linked_list* max = head;
-    for (; node; node = node->next) {
-        if (node->count > max->count) {
-            max = node;
-        }
-    }
-    return max;
-}
+/*linked_list* get_max(linked_list* head) {*/
+  /*if (!head) {*/
+    /*return NULL;*/
+  /*}*/
+  /*linked_list* node = head;*/
+  /*linked_list* max = head;*/
+  /*for (; node; node = node->next) {*/
+    /*if (node->count > max->count) {*/
+        /*max = node;*/
+    /*}*/
+  /*}*/
+  /*return max;*/
+/*}*/

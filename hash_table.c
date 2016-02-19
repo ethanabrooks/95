@@ -86,7 +86,7 @@ int add_to_table (hash_table* table, char* value)
         linked_list** bucket_ptr = &table->table[bucket_num] ;
 
       /* add value to proper bucket */
-        *bucket_ptr = add_if_absent(*bucket_ptr, value);
+        add_if_absent(bucket_ptr, value);
     }
     return 0 ;
 }
@@ -105,8 +105,10 @@ int delete_from_table (hash_table* table, char* value)
   /* delete data from bucket's linked list */
     if (search_result) {
         int bucket_num = map(table, value);
-        linked_list* bucket = delete_node(table->table[bucket_num], value);
-        table->table[bucket_num] = bucket;
+        int err = delete_node(&(table->table[bucket_num]), value);
+        if (err) {
+          return err;
+        }
     }
 
   return 0 ;
@@ -143,7 +145,7 @@ void delete_table (hash_table* table)
       /* free memory reserved for hash table and linked lists */
         int i;
         for (i=0; i<table->num_of_buckets; i++) {
-            table->table[i] = delete_list(table->table[i]);
+            delete_list(&(table->table[i]));
         }
         free(table->table);
     }
@@ -165,7 +167,7 @@ void print_table (hash_table* table) {
     if (table) {
         for (int i=0; i<table->num_of_buckets; i++) {
             if (table->table[i]) {
-                printf("bucket[%d]={", i);
+                printf("bucket[%d]={ ", i);
                 print_list(table->table[i]);
                 printf(" }\n");
             }
@@ -173,33 +175,33 @@ void print_table (hash_table* table) {
     }
 }
 
-linked_list* extract_max (hash_table* table) {
-    linked_list* global_max = NULL;
-    linked_list** max_bucket_ptr = NULL;
+/*linked_list* extract_max (hash_table* table) {*/
+    /*linked_list* global_max = NULL;*/
+    /*linked_list** max_bucket_ptr = NULL;*/
     
-    //retrieve max counts from each bucket
-    for (int i = 0; i < table->num_of_buckets; i++) {
-        linked_list* local_max = get_max(table->table[i]);
+    /*//retrieve max counts from each bucket*/
+    /*for (int i = 0; i < table->num_of_buckets; i++) {*/
+        /*linked_list* local_max = get_max(table->table[i]);*/
         
-        // update global max
-        int new_max = global_max && local_max &&
-            (local_max->count > global_max->count);
-        if (global_max == NULL || new_max) {
-            global_max = local_max;
-            max_bucket_ptr = &table->table[i];
-        }
-    }
-    linked_list* max_copy = copy(global_max);
-    *max_bucket_ptr = delete_specific_node(*max_bucket_ptr, global_max);
-    return max_copy;
-}
+        /*// update global max*/
+        /*int new_max = global_max && local_max &&*/
+            /*(local_max->count > global_max->count);*/
+        /*if (global_max == NULL || new_max) {*/
+            /*global_max = local_max;*/
+            /*max_bucket_ptr = &table->table[i];*/
+        /*}*/
+    /*}*/
+    /*linked_list* max_copy = copy(global_max);*/
+    /**max_bucket_ptr = delete_specific_node(*max_bucket_ptr, global_max);*/
+    /*return max_copy;*/
+/*}*/
 
 linked_list* to_linked_list(hash_table* table) {
   linked_list* new_list = NULL;
   for (int i = 0; i < table->num_of_buckets; i++) {
     linked_list* bucket = table->table[i];
     for (; bucket; bucket = bucket->next) {
-      new_list = add(new_list, bucket->value);
+      add(&new_list, bucket->value);
     }
   }
   return new_list;
