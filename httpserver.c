@@ -29,7 +29,7 @@ char* terminate(char* string) {
 
 void server_error(char *error_msg, char** reply_ptr, int *bad_request_ptr) {
   perror(error_msg);
-  *reply_ptr = "HTTP/1.1 500 Internal Server Error";
+  *reply_ptr = "HTTP/1.1 500 Internal Server Error\0";
   (*bad_request_ptr)++;
 }
 
@@ -125,8 +125,7 @@ void *start_server(void *argv_void)
             strcat(page_html, page_list->value);
             strcat(page_html, "</li>\n");
           }
-          terminate(page_html);
-          //TODO: add NULLs to buffers
+          //TODO: add NULLs to buffers/figure out overwriting issue
 
           strcpy(header, ok_header); 
           sprintf(html, "<html>\n\
@@ -165,6 +164,7 @@ void *start_server(void *argv_void)
             strcpy(header, ok_header);
             size_t bytes_read = fread(html, 1, sizeof(html), file);
             reply = strcat(header, html);
+            terminate(reply);
             if (!reply) { 
               server_error("strcat failed", &reply, &bad_requests);
             }
