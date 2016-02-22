@@ -23,6 +23,10 @@ http://www.binarii.com/files/papers/c_sockets.txt
 int quit = 0;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
+char* terminate(char* string) {
+  return strcat(string, "\0");
+}
+
 void server_error(char *error_msg, char** reply_ptr, int *bad_request_ptr) {
   perror(error_msg);
   *reply_ptr = "HTTP/1.1 500 Internal Server Error";
@@ -121,7 +125,7 @@ void *start_server(void *argv_void)
             strcat(page_html, page_list->value);
             strcat(page_html, "</li>\n");
           }
-          //TODO: unsuccessful pages should not be listed
+          terminate(page_html);
           //TODO: add NULLs to buffers
 
           strcpy(header, ok_header); 
@@ -136,6 +140,7 @@ void *start_server(void *argv_void)
               successful_requests, bad_requests, bytes_received,
               page_html);
           reply = strcat(header, html);
+          terminate(reply);
         } else {
 
           char header     [BUFF_SIZE];
@@ -150,6 +155,7 @@ void *start_server(void *argv_void)
           if (!filepath) {
             server_error("strcat failed", &reply, &bad_requests);
           }
+          terminate(filepath);
           FILE *file = fopen(filepath, "r");
           if (!file) {
             fprintf(stderr, "Could not find %s in root directory\n", fname);
