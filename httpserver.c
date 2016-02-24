@@ -24,7 +24,8 @@ int quit = 0;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 char* terminate(char* string) {
-  return strcat(string, "\0");
+  char* new_string = calloc(strlen(string) + 1, sizeof(char));
+  return strcat(new_string, "\0");
 }
 
 void server_error(char *error_msg, char** reply_ptr, int *bad_request_ptr) {
@@ -139,7 +140,6 @@ void *start_server(void *argv_void)
               successful_requests, bad_requests, bytes_received,
               page_html);
           reply = strcat(header, html);
-          terminate(reply);
         } else {
 
           char header     [BUFF_SIZE];
@@ -154,7 +154,6 @@ void *start_server(void *argv_void)
           if (!filepath) {
             server_error("strcat failed", &reply, &bad_requests);
           }
-          terminate(filepath);
           FILE *file = fopen(filepath, "r");
           if (!file) {
             fprintf(stderr, "Could not find %s in root directory\n", fname);
@@ -164,7 +163,6 @@ void *start_server(void *argv_void)
             strcpy(header, ok_header);
             size_t bytes_read = fread(html, 1, sizeof(html), file);
             reply = strcat(header, html);
-            terminate(reply);
             if (!reply) { 
               server_error("strcat failed", &reply, &bad_requests);
             }
@@ -180,7 +178,9 @@ void *start_server(void *argv_void)
         // 6. send: send the message over the socket
         // note that the second argument is a char*,
         // and the third is the number of chars
+        terminate(reply);
         send(fd, reply, strlen(reply), 0);
+        free(reply);
         printf("Server sent message: %s\n", reply);
 
       } 
