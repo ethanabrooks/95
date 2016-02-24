@@ -182,8 +182,8 @@ void *start_server(void *argv_void)
         // and the third is the number of chars
         terminate(&reply);
         send(fd, reply, strlen(reply), 0);
-        free(reply);
         printf("Server sent message: %s\n", reply);
+        free(reply);
 
       } 
     }
