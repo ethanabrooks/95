@@ -23,9 +23,9 @@ http://www.binarii.com/files/papers/c_sockets.txt
 int quit = 0;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
-char* terminate(char* string) {
-  char* new_string = calloc(strlen(string) + 1, sizeof(char));
-  return strcat(new_string, "\0");
+void terminate(char** string) {
+  char* new_string = calloc(strlen(*string) + 1, sizeof(char));
+  *string = strcat(new_string, "\0");
 }
 
 void server_error(char *error_msg, char** reply_ptr, int *bad_request_ptr) {
@@ -154,7 +154,7 @@ void *start_server(void *argv_void)
           if (!filepath) {
             server_error("strcat failed", &reply, &bad_requests);
           }
-          terminate(filepath);
+          terminate(&filepath);
           FILE *file = fopen(filepath, "r");
           free(filepath);
           if (!file) {
@@ -180,7 +180,7 @@ void *start_server(void *argv_void)
         // 6. send: send the message over the socket
         // note that the second argument is a char*,
         // and the third is the number of chars
-        terminate(reply);
+        terminate(&reply);
         send(fd, reply, strlen(reply), 0);
         free(reply);
         printf("Server sent message: %s\n", reply);
