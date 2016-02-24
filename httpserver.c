@@ -154,7 +154,9 @@ void *start_server(void *argv_void)
           if (!filepath) {
             server_error("strcat failed", &reply, &bad_requests);
           }
+          terminate(filepath);
           FILE *file = fopen(filepath, "r");
+          free(filepath);
           if (!file) {
             fprintf(stderr, "Could not find %s in root directory\n", fname);
             reply = "HTTP/1.1 404 Not Found";
