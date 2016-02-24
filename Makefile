@@ -3,7 +3,7 @@ all: http
 http: clean httpserver.c
 	clang -g -o http httpserver.c hash_table.c linked_list.c -lpthread
 	#valgrind ./http 3001
-	valgrind --leak-check=full ./http 3001 '$($HOME)/595/hw4/'
+	valgrind --leak-check=full ./http 3000 "${HOME}/595/hw4/"
 
 test-hash-table: clean hash_table_tester.c
 	clang -g -o test hash_table_tester.c hash_table.c linked_list.c

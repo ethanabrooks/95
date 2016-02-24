@@ -18,6 +18,8 @@ http://www.binarii.com/files/papers/c_sockets.txt
 #include <pthread.h>
 #include "hash_table.h"
 #include "linked_list.h"
+#include <sys/types.h>
+#include <sys/time.h>
 #define BUFF_SIZE 10000
 
 int quit = 0;
@@ -25,6 +27,7 @@ pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 void terminate(char** string) {
   char* new_string = calloc(strlen(*string) + 1, sizeof(char));
+  strcpy(new_string, *string);
   *string = strcat(new_string, "\0");
 }
 
@@ -90,6 +93,15 @@ void *start_server(void *argv_void)
 
     // 4. accept: wait here until we get a connection on that port
     int sin_size = sizeof(struct sockaddr_in);
+    fd_set set;
+
+    FD_ZERO (&set);
+    FD_SET (sock, &set);
+    FD_SET (0, &set);
+    select(FD_SETSIZE, &set, NULL, NULL, NULL);
+    if (quit) {
+      break;
+    }
     fd = accept(sock, (struct sockaddr *)&client_addr,(socklen_t *)&sin_size);
     if (fd != -1) {
       printf("Server got a connection from (%s, %d)\n",
@@ -155,8 +167,10 @@ void *start_server(void *argv_void)
             server_error("strcat failed", &reply, &bad_requests);
           }
           terminate(&filepath);
+          puts("Arg to fopen:");
+          puts(filepath);
           FILE *file = fopen(filepath, "r");
-          free(filepath);
+          /*free(filepath);*/
           if (!file) {
             fprintf(stderr, "Could not find %s in root directory\n", fname);
             reply = "HTTP/1.1 404 Not Found";
