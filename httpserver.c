@@ -186,6 +186,7 @@ void *start_server(void *argv_void)
       } 
     }
   } // end while
+  delete_table(page_table);
   
   // 7. close: close the connection
   close(fd);
