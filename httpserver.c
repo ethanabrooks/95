@@ -182,6 +182,7 @@ void *start_server(void *argv_void)
             if (err) {
               server_error("error adding to table", &reply, &bad_requests);
             }
+            fclose(file);
           }
         }
 
