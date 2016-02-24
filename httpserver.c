@@ -25,12 +25,6 @@ http://www.binarii.com/files/papers/c_sockets.txt
 int quit = 0;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
-void terminate(char** string) {
-  char* new_string = calloc(strlen(*string) + 1, sizeof(char));
-  strcpy(new_string, *string);
-  *string = strcat(new_string, "\0");
-}
-
 void server_error(char *error_msg, char** reply_ptr, int *bad_request_ptr) {
   perror(error_msg);
   *reply_ptr = "HTTP/1.1 500 Internal Server Error\0";
@@ -166,20 +160,17 @@ void *start_server(void *argv_void)
           if (!filepath) {
             server_error("strcat failed", &reply, &bad_requests);
           }
-          terminate(&filepath);
-          puts("Arg to fopen:");
-          puts(filepath);
           FILE *file = fopen(filepath, "r");
-          /*free(filepath);*/
           if (!file) {
             fprintf(stderr, "Could not find %s in root directory\n", fname);
-            reply = "HTTP/1.1 404 Not Found";
+            reply = "HTTP/1.1 404 Not Found\0";
             bad_requests++;
           } else {
             strcpy(header, ok_header);
             size_t bytes_read = fread(html, 1, sizeof(html), file);
+            html[bytes_read] = '\0';
             reply = strcat(header, html);
-            if (!reply) { 
+            if (!reply) {
               server_error("strcat failed", &reply, &bad_requests);
             }
             successful_requests++;
@@ -190,15 +181,12 @@ void *start_server(void *argv_void)
             }
           }
         }
-    
+
         // 6. send: send the message over the socket
         // note that the second argument is a char*,
         // and the third is the number of chars
-        terminate(&reply);
         send(fd, reply, strlen(reply), 0);
         printf("Server sent message: %s\n", reply);
-        free(reply);
-
       } 
     }
   } // end while
