@@ -116,6 +116,9 @@ void *start_server(void *argv_void)
       }
 
       char *fname = strsep(&fname_ptr, " ");
+      if (!fname) {
+        server_error("strsep failed", &reply, &bad_requests);
+      }
       if (strcmp(fname, "favicon.ico") != 0) {
 
         // access file specified by request
