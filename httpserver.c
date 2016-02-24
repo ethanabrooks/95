@@ -89,7 +89,7 @@ void *start_server(void *argv_void)
 
     // 4. accept: wait here until we get a connection on that port
     int sin_size = sizeof(struct sockaddr_in);
-        fd = accept(sock, (struct sockaddr *)&client_addr,(socklen_t *)&sin_size);
+    fd = accept(sock, (struct sockaddr *)&client_addr,(socklen_t *)&sin_size);
     if (fd != -1) {
       printf("Server got a connection from (%s, %d)\n",
           inet_ntoa(client_addr.sin_addr),ntohs(client_addr.sin_port));
@@ -233,7 +233,7 @@ int main(int argc, char *argv[])
   if ( pthread_create( &t1, NULL, start_server, argv) != 0  ) {
     return error(); 
   }
-  if ( pthread_create( &t1, NULL, prompt_for_quit, NULL  ) != 0  ) {
+  if ( pthread_create( &t2, NULL, prompt_for_quit, NULL  ) != 0  ) {
     return error(); 
   } 
   if ( pthread_join( t1, NULL  ) != 0  ) { 

@@ -1,7 +1,7 @@
 all: http
 	 
 http: clean httpserver.c
-	clang -g -o http httpserver.c hash_table.c linked_list.c
+	clang -g -o http httpserver.c hash_table.c linked_list.c -lpthread
 	#valgrind ./http 3001
 	valgrind --leak-check=full ./http 3001 '/Users/Ethan/595/homework4/'
 
