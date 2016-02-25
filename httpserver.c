@@ -225,8 +225,8 @@ int error() {
 int main(int argc, char *argv[])
 {
   // check the number of arguments
-  if (argc < 2) {
-      printf("\nUsage: %s [port_number]\n", argv[0]);
+  if (argc < 3) {
+      printf("\nUsage: %s [port_number] [root directory]\n", argv[0]);
       exit(-1);
   }
 
