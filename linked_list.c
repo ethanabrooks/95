@@ -229,7 +229,7 @@ void print_list (linked_list* head_node ) {
  * returns NULL if successful, otherwise head node is returned
  */
 void delete_list_helper (linked_list* head_node) {
-  if (head_node) {
+  if (head_node != NULL) {
       /* if head node exists, delete it */
       linked_list *next = head_node->next;
       free(head_node->value);

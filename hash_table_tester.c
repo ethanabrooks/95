@@ -15,7 +15,7 @@ int main() {
   linked_list* list = to_linked_list(htable);
   puts("should be abc, test2");
   print_list(list);
-  delete_list(list);
+  delete_list(&list);
   delete_table(htable);
   puts("should be nothing");
   /*print_table(htable);*/
