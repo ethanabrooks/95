@@ -232,6 +232,7 @@ void delete_list_helper (linked_list* head_node) {
   if (head_node != NULL) {
       /* if head node exists, delete it */
       linked_list *next = head_node->next;
+      printf("DELETING %s\n", head_node->value);
       free(head_node->value);
       free(head_node);
     /* recurse on next node */

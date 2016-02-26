@@ -46,7 +46,7 @@ void *start_server(void *argv_void)
     perror("Socket");
     exit(1);
   }
-  int temp;
+  int temp = 1;
   if (setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,&temp,sizeof(int)) == -1) {
     perror("Setsockopt");
     exit(1);
