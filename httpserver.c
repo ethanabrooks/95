@@ -137,7 +137,7 @@ void *start_server(void *argv_void)
 
         linked_list* page_list = to_linked_list(page_table);
         strcpy(page_html, "\n<ul>\n");
-        for (linked_list* node; node; node = node->next) {
+        for (linked_list* node = page_list; node; node = node->next) {
           strcat(page_html, "\t<li>");
           strcat(page_html, node->value);
           strcat(page_html, "</li>\n");
@@ -179,7 +179,7 @@ void *start_server(void *argv_void)
 
         FILE *file = fopen(filepath, "r");
         if (!file) {
-          fprintf(stderr, "Could not find %s in root directory\n", filepath);
+          fprintf(stderr, "Could not find %s in root directory\n", fname);
           reply = "HTTP/1.1 404 Not Found\0";
           bad_requests++;
           continue;
