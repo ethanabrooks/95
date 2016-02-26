@@ -46,6 +46,7 @@ void *start_server(void *argv_void)
     perror("Socket");
     exit(1);
   }
+
   int temp = 1;
   if (setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,&temp,sizeof(int)) == -1) {
     perror("Setsockopt");
@@ -58,6 +59,7 @@ void *start_server(void *argv_void)
   server_addr.sin_family = AF_INET;         
   server_addr.sin_addr.s_addr = INADDR_ANY; 
   bzero(&(server_addr.sin_zero),8); 
+
   
   // 2. bind: use the socket and associate it with the port number
   if (bind(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1) {
@@ -110,11 +112,12 @@ void *start_server(void *argv_void)
       // null-terminate the string
       request[bytes_received] = '\0';
 
-      char *fname_ptr = strchr(request, '/') + 1;
+      char *fname_ptr = strchr(request, '/');
       if (!fname_ptr) {
         server_error("unrecognized request format", &reply, &bad_requests);
         continue;
       }
+      fname_ptr++;
 
       char *fname = strsep(&fname_ptr, " ");
       if (!fname) {
@@ -134,12 +137,13 @@ void *start_server(void *argv_void)
 
         linked_list* page_list = to_linked_list(page_table);
         strcpy(page_html, "\n<ul>\n");
-        for (; page_list; page_list = page_list->next) {
+        for (linked_list* node; node; node = node->next) {
           strcat(page_html, "\t<li>");
-          strcat(page_html, page_list->value);
+          strcat(page_html, node->value);
           strcat(page_html, "</li>\n");
         }
-        //TODO: add NULLs to buffers/figure out overwriting issue
+        delete_list(&page_list);
+
 
         strcpy(header, ok_header); 
         sprintf(html, "<html>\n\
@@ -162,29 +166,38 @@ void *start_server(void *argv_void)
         strcpy(pathbuffer, argv[2]); // add root to filepath
         if (!pathbuffer[0]) { 
           server_error("strcpy failed", &reply, &bad_requests);
+          continue;
+        }
+        if (pathbuffer[strlen(pathbuffer) - 1] != '/') {
+          strcat(pathbuffer, "/");
         }
         char* filepath = strcat(pathbuffer, fname); // append filename to path
         if (!filepath) {
           server_error("strcat failed", &reply, &bad_requests);
+          continue;
         }
+
         FILE *file = fopen(filepath, "r");
         if (!file) {
-          fprintf(stderr, "Could not find %s in root directory\n", fname);
+          fprintf(stderr, "Could not find %s in root directory\n", filepath);
           reply = "HTTP/1.1 404 Not Found\0";
           bad_requests++;
-        } else {
+          continue;
+        }
           strcpy(header, ok_header);
           size_t bytes_read = fread(html, 1, sizeof(html), file);
           html[bytes_read] = '\0';
           reply = strcat(header, html);
           if (!reply) {
             server_error("strcat failed", &reply, &bad_requests);
+            continue;
           }
           successful_requests++;
           bytes_received += strlen(reply); 
           int err = add_to_table(page_table, fname);
           if (err) {
             server_error("error adding to table", &reply, &bad_requests);
+            continue;
           }
           fclose(file);
         }
@@ -194,7 +207,6 @@ void *start_server(void *argv_void)
         // and the third is the number of chars
         send(fd, reply, strlen(reply), 0);
         printf("Server sent message: %s\n", reply);
-      } 
     }
   } // end while
   delete_table(page_table);
