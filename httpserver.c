@@ -113,77 +113,80 @@ void *start_server(void *argv_void)
       char *fname_ptr = strchr(request, '/') + 1;
       if (!fname_ptr) {
         server_error("unrecognized request format", &reply, &bad_requests);
+        continue;
       }
 
       char *fname = strsep(&fname_ptr, " ");
       if (!fname) {
         server_error("strsep failed", &reply, &bad_requests);
+        continue;
       }
-      if (strcmp(fname, "favicon.ico") != 0) {
+      if (strcmp(fname, "favicon.ico") == 0) {
+        continue;
+      }
 
-        // access file specified by request
-        char *ok_header = "HTTP/1.1 200 OK\nContent-Type: text/html\n\n"; 
-        if (strcmp(fname, "stats") == 0) {
-          char header [BUFF_SIZE];
-          char html [BUFF_SIZE];
-          char page_html [BUFF_SIZE];
+      // access file specified by request
+      char *ok_header = "HTTP/1.1 200 OK\nContent-Type: text/html\n\n"; 
+      if (strcmp(fname, "stats") == 0) {
+        char header [BUFF_SIZE];
+        char html [BUFF_SIZE];
+        char page_html [BUFF_SIZE];
 
-          linked_list* page_list = to_linked_list(page_table);
-          strcpy(page_html, "\n<ul>\n");
-          for (; page_list; page_list = page_list->next) {
-            strcat(page_html, "\t<li>");
-            strcat(page_html, page_list->value);
-            strcat(page_html, "</li>\n");
-          }
-          //TODO: add NULLs to buffers/figure out overwriting issue
+        linked_list* page_list = to_linked_list(page_table);
+        strcpy(page_html, "\n<ul>\n");
+        for (; page_list; page_list = page_list->next) {
+          strcat(page_html, "\t<li>");
+          strcat(page_html, page_list->value);
+          strcat(page_html, "</li>\n");
+        }
+        //TODO: add NULLs to buffers/figure out overwriting issue
 
-          strcpy(header, ok_header); 
-          sprintf(html, "<html>\n\
-              Number of page requests handled successfully: %d\n<p>\n\
-              Number of page requests that could not be handled \
-              (because the page didn't exist or an error occurred): %d\n<p>\n\
-              Total number of bytes sent back to the client \
-              for all successful page requests: %d\n<p>\n\
-              The distinct names of all files retrieved \
-              for all successful page requests: %s</li>\n</ul>",
-              successful_requests, bad_requests, bytes_received,
-              page_html);
-          reply = strcat(header, html);
+        strcpy(header, ok_header); 
+        sprintf(html, "<html>\n\
+            Number of page requests handled successfully: %d\n<p>\n\
+            Number of page requests that could not be handled \
+            (because the page didn't exist or an error occurred): %d\n<p>\n\
+            Total number of bytes sent back to the client \
+            for all successful page requests: %d\n<p>\n\
+            The distinct names of all files retrieved \
+            for all successful page requests: %s</li>\n</ul>",
+            successful_requests, bad_requests, bytes_received,
+            page_html);
+        reply = strcat(header, html);
+      } else {
+
+        char header     [BUFF_SIZE];
+        char html       [BUFF_SIZE];
+        char pathbuffer [BUFF_SIZE]; // buffer for full path to file
+
+        strcpy(pathbuffer, argv[2]); // add root to filepath
+        if (!pathbuffer[0]) { 
+          server_error("strcpy failed", &reply, &bad_requests);
+        }
+        char* filepath = strcat(pathbuffer, fname); // append filename to path
+        if (!filepath) {
+          server_error("strcat failed", &reply, &bad_requests);
+        }
+        FILE *file = fopen(filepath, "r");
+        if (!file) {
+          fprintf(stderr, "Could not find %s in root directory\n", fname);
+          reply = "HTTP/1.1 404 Not Found\0";
+          bad_requests++;
         } else {
-
-          char header     [BUFF_SIZE];
-          char html       [BUFF_SIZE];
-          char pathbuffer [BUFF_SIZE]; // buffer for full path to file
-
-          strcpy(pathbuffer, argv[2]); // add root to filepath
-          if (!pathbuffer[0]) { 
-            server_error("strcpy failed", &reply, &bad_requests);
-          }
-          char* filepath = strcat(pathbuffer, fname); // append filename to path
-          if (!filepath) {
+          strcpy(header, ok_header);
+          size_t bytes_read = fread(html, 1, sizeof(html), file);
+          html[bytes_read] = '\0';
+          reply = strcat(header, html);
+          if (!reply) {
             server_error("strcat failed", &reply, &bad_requests);
           }
-          FILE *file = fopen(filepath, "r");
-          if (!file) {
-            fprintf(stderr, "Could not find %s in root directory\n", fname);
-            reply = "HTTP/1.1 404 Not Found\0";
-            bad_requests++;
-          } else {
-            strcpy(header, ok_header);
-            size_t bytes_read = fread(html, 1, sizeof(html), file);
-            html[bytes_read] = '\0';
-            reply = strcat(header, html);
-            if (!reply) {
-              server_error("strcat failed", &reply, &bad_requests);
-            }
-            successful_requests++;
-            bytes_received += strlen(reply); 
-            int err = add_to_table(page_table, fname);
-            if (err) {
-              server_error("error adding to table", &reply, &bad_requests);
-            }
-            fclose(file);
+          successful_requests++;
+          bytes_received += strlen(reply); 
+          int err = add_to_table(page_table, fname);
+          if (err) {
+            server_error("error adding to table", &reply, &bad_requests);
           }
+          fclose(file);
         }
 
         // 6. send: send the message over the socket
